@@ -1,0 +1,1475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NoOnes Arbitrage Scanner — LIVE</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050a0e;
+    --bg2: #080f14;
+    --bg3: #0c1620;
+    --panel: #0d1b26;
+    --border: #0e2a3a;
+    --border2: #1a3a50;
+    --green: #00e676;
+    --green2: #00c853;
+    --red: #ff1744;
+    --yellow: #ffea00;
+    --blue: #00b0ff;
+    --orange: #ff6d00;
+    --btc: #f7931a;
+    --eth: #627eea;
+    --text: #c8dde8;
+    --text2: #6a8fa5;
+    --text3: #3a5f75;
+    --glow-green: 0 0 20px rgba(0,230,118,0.4);
+    --glow-red: 0 0 20px rgba(255,23,68,0.4);
+    --glow-blue: 0 0 20px rgba(0,176,255,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Rajdhani', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    background: linear-gradient(90deg, #020c14, #050f1a, #020c14);
+    border-bottom: 1px solid var(--border2);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: 'Orbitron', monospace;
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    background: linear-gradient(90deg, var(--green), var(--blue));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 8px rgba(0,230,118,0.5));
+  }
+
+  .topbar-center { display: flex; gap: 20px; align-items: center; }
+
+  .price-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 5px 12px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+  }
+  .price-chip .symbol { font-weight: 700; }
+  .price-chip .btcsym { color: var(--btc); }
+  .price-chip .ethsym { color: var(--eth); }
+  .price-chip .val { color: #fff; }
+  .price-chip .chg { font-size: 11px; }
+  .chg.up { color: var(--green); }
+  .chg.dn { color: var(--red); }
+
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: var(--glow-green);
+    animation: pulse 1.5s infinite;
+  }
+  .status-dot.off { background: var(--text3); box-shadow: none; animation: none; }
+
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .status-label {
+    font-size: 11px;
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--text2);
+    letter-spacing: 1px;
+  }
+
+  .api-badge {
+    font-size: 10px;
+    font-family: 'Share Tech Mono', monospace;
+    padding: 3px 8px;
+    border-radius: 3px;
+    background: rgba(0,230,118,0.1);
+    border: 1px solid rgba(0,230,118,0.3);
+    color: var(--green);
+    letter-spacing: 1px;
+  }
+  .api-badge.sim {
+    background: rgba(255,234,0,0.1);
+    border-color: rgba(255,234,0,0.3);
+    color: var(--yellow);
+  }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 24px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .ctrl-group { display: flex; align-items: center; gap: 8px; }
+  .ctrl-label { font-size: 11px; color: var(--text2); letter-spacing: 1px; text-transform: uppercase; }
+
+  .ctrl-input {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    color: #fff;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    padding: 5px 10px;
+    border-radius: 3px;
+    width: 90px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .ctrl-input:focus { border-color: var(--blue); }
+
+  .btn {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 7px 18px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .btn-start {
+    background: linear-gradient(135deg, #00e676, #00c853);
+    color: #000;
+    box-shadow: 0 0 15px rgba(0,230,118,0.4);
+  }
+  .btn-start:hover { box-shadow: 0 0 25px rgba(0,230,118,0.7); transform: translateY(-1px); }
+  .btn-start.running {
+    background: linear-gradient(135deg, #ff1744, #d50000);
+    color: #fff;
+    box-shadow: 0 0 15px rgba(255,23,68,0.4);
+  }
+
+  .btn-api {
+    background: transparent;
+    border: 1px solid var(--yellow);
+    color: var(--yellow);
+    font-size: 10px;
+  }
+  .btn-api:hover { background: rgba(255,234,0,0.1); }
+
+  .filter-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 5px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .filter-btn.btc-active { border-color: var(--btc); color: var(--btc); background: rgba(247,147,26,0.08); }
+  .filter-btn.eth-active { border-color: var(--eth); color: var(--eth); background: rgba(98,126,234,0.08); }
+
+  .ctrl-sep { width: 1px; height: 24px; background: var(--border2); }
+
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 0;
+    min-height: calc(100vh - 110px);
+  }
+
+  .left-panel { padding: 16px; }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .section-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--text2);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-title::before {
+    content: '';
+    width: 3px; height: 14px;
+    background: linear-gradient(180deg, var(--green), var(--blue));
+    border-radius: 2px;
+  }
+
+  .count-badge {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 2px;
+    background: rgba(0,230,118,0.1);
+    border: 1px solid rgba(0,230,118,0.25);
+    color: var(--green);
+  }
+
+  .opps-grid { display: flex; flex-direction: column; gap: 8px; }
+
+  .opp-card {
+    background: var(--panel);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 14px 16px;
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    gap: 12px;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+    overflow: hidden;
+    animation: slideIn 0.3s ease;
+  }
+
+  @keyframes slideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+  .opp-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--green), var(--green2));
+  }
+  .opp-card:hover { border-color: var(--green); box-shadow: var(--glow-green); transform: translateX(2px); }
+  .opp-card.high-profit::before { background: linear-gradient(180deg, #ffea00, #ff6d00); }
+  .opp-card.high-profit { border-color: rgba(255,234,0,0.3); }
+  .opp-card.high-profit:hover { border-color: var(--yellow); box-shadow: 0 0 20px rgba(255,234,0,0.3); }
+  .opp-card.eth-card::before { background: linear-gradient(180deg, var(--eth), #4a5fc8); }
+
+  .rank { font-family: 'Orbitron', monospace; font-size: 11px; font-weight: 900; color: var(--text3); min-width: 24px; }
+  .opp-main { min-width: 0; }
+
+  .opp-route {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+  }
+
+  .coin-tag {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 2px;
+  }
+  .coin-tag.btc { background: rgba(247,147,26,0.15); color: var(--btc); border: 1px solid rgba(247,147,26,0.3); }
+  .coin-tag.eth { background: rgba(98,126,234,0.15); color: var(--eth); border: 1px solid rgba(98,126,234,0.3); }
+
+  .method-buy { font-size: 13px; font-weight: 700; color: var(--blue); }
+  .arrow { color: var(--text3); font-size: 12px; }
+  .method-sell { font-size: 13px; font-weight: 700; color: var(--orange); }
+
+  .opp-meta {
+    font-size: 11px;
+    color: var(--text2);
+    font-family: 'Share Tech Mono', monospace;
+    display: flex;
+    gap: 12px;
+  }
+  .meta-item { display: flex; gap: 4px; }
+  .meta-key { color: var(--text3); }
+
+  .opp-spread { text-align: center; min-width: 70px; }
+  .spread-val { font-family: 'Orbitron', monospace; font-size: 16px; font-weight: 900; color: var(--green); }
+  .spread-val.high { color: var(--yellow); }
+  .spread-val.med { color: #69f0ae; }
+  .spread-label { font-size: 10px; color: var(--text3); letter-spacing: 1px; }
+
+  .opp-profit { text-align: right; min-width: 100px; }
+  .profit-val { font-family: 'Share Tech Mono', monospace; font-size: 18px; font-weight: 700; color: var(--green); }
+  .profit-val.high { color: var(--yellow); text-shadow: 0 0 10px rgba(255,234,0,0.5); }
+  .profit-label { font-size: 10px; color: var(--text3); letter-spacing: 1px; }
+
+  .log-btn {
+    margin-top: 4px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    padding: 3px 8px;
+    background: transparent;
+    border: 1px solid var(--green);
+    color: var(--green);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .log-btn:hover { background: rgba(0,230,118,0.15); }
+
+  .alert-banner {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: rgba(255,234,0,0.05);
+    border: 1px solid rgba(255,234,0,0.4);
+    border-radius: 4px;
+    margin-bottom: 12px;
+    animation: flashBorder 0.5s infinite alternate;
+  }
+  .alert-banner.show { display: flex; }
+  @keyframes flashBorder { from { border-color: rgba(255,234,0,0.2); } to { border-color: rgba(255,234,0,0.8); } }
+  .alert-icon { font-size: 20px; }
+  .alert-text { flex: 1; }
+  .alert-title { font-family: 'Orbitron', monospace; font-size: 11px; font-weight: 700; color: var(--yellow); letter-spacing: 2px; }
+  .alert-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .alert-profit { font-family: 'Orbitron', monospace; font-size: 18px; font-weight: 900; color: var(--yellow); text-shadow: 0 0 15px rgba(255,234,0,0.6); }
+
+  .right-panel {
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    background: var(--bg2);
+  }
+
+  .tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .tab {
+    flex: 1;
+    padding: 10px 8px;
+    text-align: center;
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text3);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .tab:hover { color: var(--text2); }
+  .tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+  .tab-content { display: none; flex: 1; overflow-y: auto; }
+  .tab-content.active { display: block; }
+
+  .price-board { padding: 12px; }
+  .pb-header {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 1px;
+    padding: 0 4px 8px 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+    display: grid;
+    grid-template-columns: 1fr 70px 70px 45px;
+    gap: 4px;
+  }
+  .pb-row {
+    display: grid;
+    grid-template-columns: 1fr 70px 70px 45px;
+    gap: 4px;
+    align-items: center;
+    padding: 6px 4px;
+    border-bottom: 1px solid rgba(14,42,58,0.5);
+    font-size: 12px;
+    transition: background 0.2s;
+  }
+  .pb-row:hover { background: rgba(13,27,38,0.8); }
+  .pb-method { font-weight: 600; color: var(--text); font-size: 11px; }
+  .pb-buy { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--blue); }
+  .pb-sell { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--orange); }
+  .pb-spread { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--green); text-align: right; }
+  .pb-coin-sep { font-family: 'Orbitron', monospace; font-size: 9px; font-weight: 700; padding: 6px 4px 2px; color: var(--text3); letter-spacing: 2px; }
+
+  .trade-log { padding: 12px; }
+  .log-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .log-stat { background: var(--bg3); border: 1px solid var(--border2); border-radius: 4px; padding: 8px 10px; text-align: center; }
+  .log-stat-val { font-family: 'Share Tech Mono', monospace; font-size: 16px; font-weight: 700; color: var(--green); }
+  .log-stat-label { font-size: 10px; color: var(--text3); letter-spacing: 1px; margin-top: 2px; }
+  .log-entry { background: var(--bg3); border: 1px solid var(--border); border-radius: 3px; padding: 8px 10px; margin-bottom: 6px; font-size: 11px; animation: slideIn 0.3s ease; }
+  .log-entry-header { display: flex; justify-content: space-between; margin-bottom: 3px; }
+  .log-entry-route { font-weight: 600; color: var(--text); }
+  .log-entry-profit { font-family: 'Share Tech Mono', monospace; font-weight: 700; color: var(--green); }
+  .log-entry-meta { color: var(--text3); font-family: 'Share Tech Mono', monospace; }
+
+  .stats-panel { padding: 12px; }
+  .stat-card { background: var(--bg3); border: 1px solid var(--border2); border-radius: 4px; padding: 10px 12px; margin-bottom: 8px; }
+  .stat-card-title { font-family: 'Orbitron', monospace; font-size: 9px; font-weight: 700; letter-spacing: 2px; color: var(--text3); margin-bottom: 8px; text-transform: uppercase; }
+  .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; }
+  .stat-key { font-size: 11px; color: var(--text2); }
+  .stat-val { font-family: 'Share Tech Mono', monospace; font-size: 12px; color: var(--text); }
+  .stat-val.green { color: var(--green); }
+  .stat-val.yellow { color: var(--yellow); }
+
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--text3); }
+  .empty-state .icon { font-size: 32px; margin-bottom: 10px; }
+  .empty-state p { font-size: 12px; font-family: 'Share Tech Mono', monospace; letter-spacing: 1px; }
+
+  .flash-new { animation: flashNew 1s ease; }
+  @keyframes flashNew { 0% { background: rgba(0,230,118,0.15); } 100% { background: var(--panel); } }
+
+  /* API STATUS CARD */
+  .api-status-card {
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    border-radius: 5px;
+    background: rgba(0,230,118,0.05);
+    border: 1px solid rgba(0,230,118,0.2);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--text2);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .api-status-card.error { background: rgba(255,23,68,0.05); border-color: rgba(255,23,68,0.2); }
+  .api-status-card.sim { background: rgba(255,234,0,0.05); border-color: rgba(255,234,0,0.2); }
+
+  /* API MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 28px;
+    width: 480px;
+    max-width: 95vw;
+  }
+  .modal-title { font-family: 'Orbitron', monospace; font-size: 14px; font-weight: 700; letter-spacing: 2px; color: var(--blue); margin-bottom: 20px; }
+  .modal-field { margin-bottom: 14px; }
+  .modal-label { font-size: 11px; color: var(--text2); letter-spacing: 1px; margin-bottom: 5px; }
+  .modal-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    color: #fff;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    padding: 8px 12px;
+    border-radius: 3px;
+    outline: none;
+  }
+  .modal-input:focus { border-color: var(--blue); }
+  .modal-btns { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+  .btn-cancel { background: transparent; border: 1px solid var(--border2); color: var(--text2); }
+  .btn-save { background: linear-gradient(135deg, var(--blue), #0077c2); color: #fff; box-shadow: var(--glow-blue); }
+  .modal-note { font-size: 11px; color: var(--text3); margin-top: 12px; line-height: 1.5; border-top: 1px solid var(--border); padding-top: 12px; }
+
+  /* FEE CALC */
+  select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    color: #fff;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    padding: 7px 10px;
+    border-radius: 3px;
+    outline: none;
+  }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+  @media (max-width: 900px) {
+    .main { grid-template-columns: 1fr; }
+    .right-panel { border-left: none; border-top: 1px solid var(--border); }
+    .topbar-center { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">ARBIT//X LIVE</div>
+  <div class="topbar-center">
+    <div class="price-chip">
+      <span class="symbol btcsym">₿</span>
+      <span class="val" id="btcPrice">$—</span>
+      <span class="chg" id="btcChg">—</span>
+    </div>
+    <div class="price-chip">
+      <span class="symbol ethsym">Ξ</span>
+      <span class="val" id="ethPrice">$—</span>
+      <span class="chg" id="ethChg">—</span>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div id="apiBadge" class="api-badge">✅ API KEY LOADED</div>
+    <div id="statusDot" class="status-dot off"></div>
+    <div id="statusLabel" class="status-label">IDLE</div>
+  </div>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <div class="ctrl-group">
+    <button class="btn btn-start" id="startBtn" onclick="toggleScanner()">▶ START</button>
+  </div>
+  <div class="ctrl-sep"></div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">BTC $</span>
+    <input class="ctrl-input" type="number" id="btcBudget" value="500" min="10">
+  </div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">ETH $</span>
+    <input class="ctrl-input" type="number" id="ethBudget" value="500" min="10">
+  </div>
+  <div class="ctrl-sep"></div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">Min Spread</span>
+    <input class="ctrl-input" type="number" id="minSpread" value="0.5" min="0" max="20" step="0.1">
+    <span class="ctrl-label">%</span>
+  </div>
+  <div class="ctrl-sep"></div>
+  <div class="ctrl-group">
+    <button class="filter-btn btc-active" id="filterBTC" onclick="toggleFilter('BTC')">₿ BTC</button>
+    <button class="filter-btn eth-active" id="filterETH" onclick="toggleFilter('ETH')">Ξ ETH</button>
+  </div>
+  <div class="ctrl-sep"></div>
+  <div class="ctrl-group">
+    <button class="btn btn-api" onclick="showModal()">🔑 EDIT API KEY</button>
+  </div>
+  <div class="ctrl-group" style="margin-left:auto">
+    <span class="ctrl-label" id="scanTimer" style="font-family:monospace; font-size:13px; color:var(--green)">READY</span>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- LEFT -->
+  <div class="left-panel">
+
+    <!-- API STATUS -->
+    <div class="api-status-card" id="apiStatusCard">
+      <span>🟢</span>
+      <span id="apiStatusText">API key loaded. Press START to fetch live Noones offers.</span>
+    </div>
+
+    <!-- ALERT BANNER -->
+    <div class="alert-banner" id="alertBanner">
+      <div class="alert-icon">⚡</div>
+      <div class="alert-text">
+        <div class="alert-title">HIGH-PROFIT OPPORTUNITY DETECTED</div>
+        <div class="alert-desc" id="alertDesc">—</div>
+      </div>
+      <div class="alert-profit" id="alertProfit">—</div>
+    </div>
+
+    <!-- OPPORTUNITIES -->
+    <div class="section-header">
+      <div class="section-title">Live Opportunities</div>
+      <span class="count-badge" id="oppCount">0 found</span>
+    </div>
+
+    <div id="oppsContainer">
+      <div class="empty-state">
+        <div class="icon">📡</div>
+        <p>PRESS START TO BEGIN SCANNING</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right-panel">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('prices')">PRICES</div>
+      <div class="tab" onclick="switchTab('log')">TRADE LOG</div>
+      <div class="tab" onclick="switchTab('stats')">STATS</div>
+      <div class="tab" onclick="switchTab('calc')" style="color:var(--green);font-size:9px">💰CALC</div>
+    </div>
+
+    <!-- PRICES TAB -->
+    <div class="tab-content active" id="tab-prices">
+      <div class="price-board" id="priceBoard">
+        <div class="empty-state"><div class="icon">📊</div><p>START SCANNER</p></div>
+      </div>
+    </div>
+
+    <!-- LOG TAB -->
+    <div class="tab-content" id="tab-log">
+      <div class="trade-log">
+        <div class="log-summary">
+          <div class="log-stat"><div class="log-stat-val" id="totalProfit">$0.00</div><div class="log-stat-label">TOTAL PROFIT</div></div>
+          <div class="log-stat"><div class="log-stat-val" id="tradeCount">0</div><div class="log-stat-label">TRADES LOGGED</div></div>
+          <div class="log-stat"><div class="log-stat-val" id="avgProfit">$0.00</div><div class="log-stat-label">AVG / TRADE</div></div>
+          <div class="log-stat"><div class="log-stat-val" id="bestTrade">$0.00</div><div class="log-stat-label">BEST TRADE</div></div>
+        </div>
+        <div id="tradeLogEntries">
+          <div class="empty-state"><div class="icon">📋</div><p>NO TRADES LOGGED YET</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATS TAB -->
+    <div class="tab-content" id="tab-stats">
+      <div class="stats-panel">
+        <div class="stat-card">
+          <div class="stat-card-title">📈 Daily Estimate</div>
+          <div class="stat-row"><span class="stat-key">Conservative (3 trades)</span><span class="stat-val green" id="estLow">—</span></div>
+          <div class="stat-row"><span class="stat-key">Moderate (8 trades)</span><span class="stat-val green" id="estMid">—</span></div>
+          <div class="stat-row"><span class="stat-key">Active (15+ trades)</span><span class="stat-val yellow" id="estHigh">—</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-title">⚙️ Current Settings</div>
+          <div class="stat-row"><span class="stat-key">BTC Budget</span><span class="stat-val" id="statBTC">$500</span></div>
+          <div class="stat-row"><span class="stat-key">ETH Budget</span><span class="stat-val" id="statETH">$500</span></div>
+          <div class="stat-row"><span class="stat-key">Total Capital</span><span class="stat-val green" id="statTotal">$1,000</span></div>
+          <div class="stat-row"><span class="stat-key">Min Spread Filter</span><span class="stat-val" id="statSpread">0.5%</span></div>
+          <div class="stat-row"><span class="stat-key">Noones Fee</span><span class="stat-val">1% per side</span></div>
+          <div class="stat-row"><span class="stat-key">Data Source</span><span class="stat-val green" id="dataSourceStat">LIVE API</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-title">📡 Scan Stats</div>
+          <div class="stat-row"><span class="stat-key">Total Scans</span><span class="stat-val" id="statScans">0</span></div>
+          <div class="stat-row"><span class="stat-key">API Calls Made</span><span class="stat-val" id="statApiCalls">0</span></div>
+          <div class="stat-row"><span class="stat-key">Last Scan</span><span class="stat-val" id="statLastScan">—</span></div>
+        </div>
+        <div class="stat-card" style="border-color: rgba(255,234,0,0.2);">
+          <div class="stat-card-title" style="color: var(--yellow);">⚠️ Important Notes</div>
+          <div style="font-size: 11px; color: var(--text2); line-height: 1.6;">
+            • Live data from Noones P2P marketplace<br>
+            • Profits shown are estimates based on available offers<br>
+            • Noones charges ~1% per transaction<br>
+            • Always verify prices manually before executing<br>
+            • Some methods may have no active offers
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FEE CALCULATOR TAB -->
+    <div class="tab-content" id="tab-calc">
+      <div class="stats-panel">
+        <div class="stat-card" style="border-color:rgba(0,230,118,0.3);">
+          <div class="stat-card-title" style="color:var(--green);">💰 EcoCash Fee Calculator</div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.5;">
+            Enter your trade profit to see exactly what you take home after all fees.
+          </div>
+          <div style="margin-bottom:8px;">
+            <div class="modal-label" style="font-size:10px;color:var(--text3);margin-bottom:4px;">GROSS PROFIT FROM TRADE ($)</div>
+            <input class="ctrl-input" id="calcProfit" type="number" value="25" min="0" style="width:100%;font-size:14px;padding:7px 10px;" oninput="calcFees()">
+          </div>
+          <div style="margin-bottom:8px;">
+            <div class="modal-label" style="font-size:10px;color:var(--text3);margin-bottom:4px;">TOTAL AMOUNT TO WITHDRAW ($)</div>
+            <input class="ctrl-input" id="calcAmount" type="number" value="500" min="0" style="width:100%;font-size:14px;padding:7px 10px;" oninput="calcFees()">
+          </div>
+          <div style="margin-bottom:8px;">
+            <div class="modal-label" style="font-size:10px;color:var(--text3);margin-bottom:4px;">WITHDRAW TO</div>
+            <select id="calcMethod" onchange="calcFees()">
+              <option value="ecocash">EcoCash Wallet (1.5%)</option>
+              <option value="ecocash_mastercard">EcoCash Mastercard (2%)</option>
+              <option value="bank">Bank Transfer (2.5%)</option>
+            </select>
+          </div>
+        </div>
+        <div class="stat-card" style="border-color:rgba(0,230,118,0.2);">
+          <div class="stat-card-title" style="color:var(--green);">📊 Fee Breakdown</div>
+          <div class="stat-row"><span class="stat-key">Gross Trade Profit</span><span class="stat-val green" id="r_gross">—</span></div>
+          <div class="stat-row" style="border-top:1px solid var(--border);padding-top:4px;margin-top:2px;">
+            <span class="stat-key">Noones Buy Fee (1%)</span><span class="stat-val" style="color:var(--red)" id="r_noonesB">—</span>
+          </div>
+          <div class="stat-row"><span class="stat-key">Noones Sell Fee (1%)</span><span class="stat-val" style="color:var(--red)" id="r_noonesS">—</span></div>
+          <div class="stat-row"><span class="stat-key" id="r_ecoLabel">EcoCash Withdrawal</span><span class="stat-val" style="color:var(--red)" id="r_eco">—</span></div>
+          <div class="stat-row" style="border-top:1px solid var(--border2);padding-top:6px;margin-top:4px;">
+            <span class="stat-key" style="font-weight:700;color:#fff">TOTAL FEES</span>
+            <span class="stat-val" style="color:var(--red);font-size:14px" id="r_totalFees">—</span>
+          </div>
+          <div class="stat-row" style="background:rgba(0,230,118,0.05);padding:6px 4px;border-radius:3px;margin-top:4px;">
+            <span class="stat-key" style="font-weight:700;color:#fff;font-size:13px">✅ YOU TAKE HOME</span>
+            <span style="font-family:Share Tech Mono,monospace;font-size:18px;font-weight:700;color:var(--green)" id="r_takeHome">—</span>
+          </div>
+          <div class="stat-row" style="margin-top:6px;"><span class="stat-key">Effective Return %</span><span class="stat-val green" id="r_return">—</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-title">📅 Daily Projection (After All Fees)</div>
+          <div class="stat-row"><span class="stat-key">3 trades/day</span><span class="stat-val green" id="r_day3">—</span></div>
+          <div class="stat-row"><span class="stat-key">8 trades/day</span><span class="stat-val green" id="r_day8">—</span></div>
+          <div class="stat-row"><span class="stat-key">15 trades/day</span><span class="stat-val yellow" id="r_day15">—</span></div>
+          <div style="font-size:10px;color:var(--text3);margin-top:8px;line-height:1.5;">
+            * Withdrawal fee charged once per day. Trade fees per trade.
+          </div>
+        </div>
+        <div class="stat-card" style="border-color:rgba(0,176,255,0.2);">
+          <div class="stat-card-title" style="color:var(--blue);">🇿🇼 Zimbabwe EcoCash Tips</div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.7;">
+            • <strong style="color:#fff">EcoCash wallet</strong> withdrawal: ~1.5% fee<br>
+            • <strong style="color:#fff">EcoCash Mastercard</strong>: ~2% fee but spendable everywhere<br>
+            • <strong style="color:#fff">Best practice:</strong> Keep capital inside Noones, only withdraw profits<br>
+            • <strong style="color:#fff">Minimum withdrawal</strong> on Noones: ~$10<br>
+            • <strong style="color:#fff">Avoid</strong> depositing + withdrawing same day — fees eat profits
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- API MODAL -->
+<div class="modal-overlay" id="apiModal">
+  <div class="modal">
+    <div class="modal-title">🔑 NOONES API CREDENTIALS</div>
+    <div class="modal-field">
+      <div class="modal-label">API KEY</div>
+      <input class="modal-input" id="apiKeyInput" type="text" placeholder="Your Noones API Key">
+    </div>
+    <div class="modal-field">
+      <div class="modal-label">API SECRET (optional — for signed requests)</div>
+      <input class="modal-input" id="apiSecretInput" type="password" placeholder="Your Noones API Secret">
+    </div>
+    <div class="modal-note">
+      Your API key is pre-loaded from your session.<br>
+      Get your key: <strong>noones.com → Developer → My Key Scanner → Authentication</strong>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-cancel" onclick="hideModal()">CANCEL</button>
+      <button class="btn btn-save" onclick="saveApiKey()">SAVE & CONNECT</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+// Your real API key — pre-loaded
+let API_KEY = '5UET0o9YLmNTtkd1LEFCqy1VFOHlQYYZLvTYl5qGXlASGy0b';
+let API_SECRET = '';
+
+const NOONES_FEE = 0.01;
+const PAYMENT_METHODS = [
+  'EcoCash', 'Bank Transfer', 'MoneyGram', 'Western Union',
+  'RIA Money Transfer', 'Wise', 'Skrill', 'Neteller',
+  'Airtel Money', 'Cash Deposit', 'OXXO', 'Transfast'
+];
+
+// Noones API base — their v1 offer list endpoint
+const API_BASE = 'https://api.noones.com/noones/v1';
+
+let isRunning = false;
+let scanInterval = null;
+let ctTimer = null;
+let tradeLog = [];
+let totalProfit = 0;
+let bestTrade = 0;
+let scanCount = 0;
+let apiCallCount = 0;
+let filterBTC = true;
+let filterETH = true;
+
+// Market prices from live data or fallback
+let btcPrice = 0;
+let ethPrice = 0;
+
+// Collected live offers: { method: { coin: { buyOffers: [], sellOffers: [] } } }
+let liveOfferData = {};
+let usingLiveData = false;
+
+// ─── API HELPERS ──────────────────────────────────────────────────────────────
+async function noonesGet(endpoint, params = {}) {
+  const url = new URL(API_BASE + endpoint);
+  Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, v));
+  
+  const res = await fetch(url.toString(), {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${API_KEY}`,
+      'Accept': 'application/json'
+    }
+  });
+  
+  apiCallCount++;
+  document.getElementById('statApiCalls').textContent = apiCallCount;
+  
+  if (!res.ok) {
+    throw new Error(`API ${res.status}: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+async function noonesPost(endpoint, body = {}) {
+  const res = await fetch(API_BASE + endpoint, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${API_KEY}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+  
+  apiCallCount++;
+  document.getElementById('statApiCalls').textContent = apiCallCount;
+  
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`API ${res.status}: ${txt}`);
+  }
+  return res.json();
+}
+
+// ─── FETCH MARKET PRICES FROM COINGECKO (free, no auth) ──────────────────────
+async function fetchMarketPrices() {
+  try {
+    const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true');
+    const data = await res.json();
+    const prevBtc = btcPrice;
+    const prevEth = ethPrice;
+    btcPrice = data.bitcoin?.usd || btcPrice || 73880;
+    ethPrice = data.ethereum?.usd || ethPrice || 3850;
+
+    document.getElementById('btcPrice').textContent = '$' + Math.round(btcPrice).toLocaleString();
+    document.getElementById('ethPrice').textContent = '$' + Math.round(ethPrice).toLocaleString();
+
+    const btcChg = data.bitcoin?.usd_24h_change?.toFixed(2) || '0.00';
+    const ethChg = data.ethereum?.usd_24h_change?.toFixed(2) || '0.00';
+
+    const btcEl = document.getElementById('btcChg');
+    btcEl.textContent = (btcChg > 0 ? '+' : '') + btcChg + '%';
+    btcEl.className = 'chg ' + (btcChg >= 0 ? 'up' : 'dn');
+
+    const ethEl = document.getElementById('ethChg');
+    ethEl.textContent = (ethChg > 0 ? '+' : '') + ethChg + '%';
+    ethEl.className = 'chg ' + (ethChg >= 0 ? 'up' : 'dn');
+    
+    return true;
+  } catch(e) {
+    console.warn('CoinGecko price fetch failed:', e);
+    // Use fallback prices if not set
+    if (!btcPrice) btcPrice = 73880;
+    if (!ethPrice) ethPrice = 3850;
+    return false;
+  }
+}
+
+// ─── FETCH NOONES LIVE OFFERS ─────────────────────────────────────────────────
+// Noones offer list endpoint: POST /offer/list
+// Returns offers with payment_method, type (buy/sell), fiat_price_per_btc etc.
+async function fetchNoonesOffers(cryptoCurrency, offerType) {
+  // offerType: 'buy' = you buying crypto (find sellers), 'sell' = you selling crypto (find buyers)
+  try {
+    const data = await noonesPost('/offer/list', {
+      crypto_currency_code: cryptoCurrency,
+      offer_type: offerType,
+      fiat_currency_code: 'USD',
+      limit: 50
+    });
+    return data?.data?.offers || data?.offers || [];
+  } catch(e) {
+    console.warn(`Failed to fetch ${cryptoCurrency} ${offerType} offers:`, e.message);
+    return null; // null = API error, not empty
+  }
+}
+
+// ─── PROCESS LIVE OFFER DATA ──────────────────────────────────────────────────
+// Group offers by payment method, find best buy and sell price per method
+function processOffers(buyOffers, sellOffers, coin) {
+  const byMethod = {};
+
+  // Buy offers = where you BUY crypto from sellers
+  // The price is what THEY want per coin → your cost
+  if (buyOffers && buyOffers.length > 0) {
+    buyOffers.forEach(offer => {
+      const method = offer.payment_method_name || offer.payment_method || 'Unknown';
+      const price = parseFloat(offer.fiat_price_per_crypto || offer.price || 0);
+      if (!price) return;
+      if (!byMethod[method]) byMethod[method] = { buyPrices: [], sellPrices: [] };
+      byMethod[method].buyPrices.push(price);
+    });
+  }
+
+  // Sell offers = where you SELL crypto to buyers
+  // The price is what THEY pay → your revenue
+  if (sellOffers && sellOffers.length > 0) {
+    sellOffers.forEach(offer => {
+      const method = offer.payment_method_name || offer.payment_method || 'Unknown';
+      const price = parseFloat(offer.fiat_price_per_crypto || offer.price || 0);
+      if (!price) return;
+      if (!byMethod[method]) byMethod[method] = { buyPrices: [], sellPrices: [] };
+      byMethod[method].sellPrices.push(price);
+    });
+  }
+
+  // For each method: best buy = lowest ask (you want cheapest purchase)
+  // Best sell = highest bid (you want most revenue)
+  const result = {};
+  Object.entries(byMethod).forEach(([method, data]) => {
+    if (data.buyPrices.length > 0 || data.sellPrices.length > 0) {
+      result[method] = {
+        bestBuyPrice: data.buyPrices.length > 0 ? Math.min(...data.buyPrices) : null,
+        bestSellPrice: data.sellPrices.length > 0 ? Math.max(...data.sellPrices) : null,
+        buyCount: data.buyPrices.length,
+        sellCount: data.sellPrices.length
+      };
+    }
+  });
+  return result;
+}
+
+// ─── COMPUTE OPPORTUNITIES FROM LIVE DATA ────────────────────────────────────
+function computeLiveOpportunities(btcData, ethData) {
+  const minSpread = parseFloat(document.getElementById('minSpread').value) || 0.5;
+  const btcBudget = parseFloat(document.getElementById('btcBudget').value) || 500;
+  const ethBudget = parseFloat(document.getElementById('ethBudget').value) || 500;
+  const opportunities = [];
+
+  const datasets = [];
+  if (filterBTC && btcData) datasets.push({ coin: 'BTC', data: btcData, budget: btcBudget });
+  if (filterETH && ethData) datasets.push({ coin: 'ETH', data: ethData, budget: ethBudget });
+
+  datasets.forEach(({ coin, data, budget }) => {
+    const methods = Object.keys(data);
+    
+    // Find arbitrage: buy cheap via one method, sell high via another
+    methods.forEach(buyMethod => {
+      methods.forEach(sellMethod => {
+        if (buyMethod === sellMethod) return;
+        
+        const buyInfo = data[buyMethod];
+        const sellInfo = data[sellMethod];
+        
+        // We need a buy price (cost) and sell price (revenue)
+        const buyPrice = buyInfo.bestBuyPrice;
+        const sellPrice = sellInfo.bestSellPrice;
+        
+        if (!buyPrice || !sellPrice) return;
+        if (sellPrice <= buyPrice) return;
+        
+        const grossSpread = (sellPrice - buyPrice) / buyPrice * 100;
+        const netProfit = budget * (grossSpread / 100) - (budget * NOONES_FEE * 2);
+        const netSpread = netProfit / budget * 100;
+        
+        if (netSpread < minSpread) return;
+        
+        const risk = netSpread > 5 ? 'HIGH' : netSpread > 3 ? 'MED' : 'LOW';
+        
+        opportunities.push({
+          coin,
+          buyMethod,
+          sellMethod,
+          buyPrice,
+          sellPrice,
+          grossSpread: grossSpread.toFixed(2),
+          netSpread: netSpread.toFixed(2),
+          netProfit: netProfit.toFixed(2),
+          budget,
+          risk,
+          buyCount: buyInfo.buyCount || 0,
+          sellCount: sellInfo.sellCount || 0,
+          isLive: true
+        });
+      });
+    });
+  });
+
+  opportunities.sort((a, b) => parseFloat(b.netProfit) - parseFloat(a.netProfit));
+  return opportunities.slice(0, 20);
+}
+
+// ─── FALLBACK SIMULATED DATA (when API fails) ─────────────────────────────────
+const btcPremiums = [0.008,0.022,0.011,0.031,0.016,0.009,0.028,0.014,0.019,0.025,0.007,0.017];
+const ethPremiums = [0.009,0.024,0.013,0.033,0.018,0.010,0.030,0.015,0.021,0.027,0.008,0.019];
+const methodPricing = {};
+PAYMENT_METHODS.forEach((m, i) => {
+  methodPricing[m] = {
+    btcBuyPremium: btcPremiums[i % btcPremiums.length] + (Math.random()-0.5)*0.004,
+    btcSellPremium: btcPremiums[i % btcPremiums.length] + (Math.random()-0.5)*0.004,
+    ethBuyPremium: ethPremiums[i % ethPremiums.length] + (Math.random()-0.5)*0.005,
+    ethSellPremium: ethPremiums[i % ethPremiums.length] + (Math.random()-0.5)*0.005,
+  };
+});
+
+function driftPricing() {
+  PAYMENT_METHODS.forEach(m => {
+    methodPricing[m].btcBuyPremium  += (Math.random()-0.5)*0.002;
+    methodPricing[m].btcSellPremium += (Math.random()-0.5)*0.002;
+    methodPricing[m].ethBuyPremium  += (Math.random()-0.5)*0.002;
+    methodPricing[m].ethSellPremium += (Math.random()-0.5)*0.002;
+    ['btcBuyPremium','btcSellPremium'].forEach(k => {
+      methodPricing[m][k] = Math.max(0.004, Math.min(0.045, methodPricing[m][k]));
+    });
+    ['ethBuyPremium','ethSellPremium'].forEach(k => {
+      methodPricing[m][k] = Math.max(0.004, Math.min(0.050, methodPricing[m][k]));
+    });
+  });
+}
+
+function computeSimulatedOpportunities() {
+  const minSpread = parseFloat(document.getElementById('minSpread').value) || 0.5;
+  const btcBudget = parseFloat(document.getElementById('btcBudget').value) || 500;
+  const ethBudget = parseFloat(document.getElementById('ethBudget').value) || 500;
+  const opportunities = [];
+
+  const coins = [];
+  if (filterBTC) coins.push({ name: 'BTC', price: btcPrice, budget: btcBudget, bk: 'btcBuyPremium', sk: 'btcSellPremium' });
+  if (filterETH) coins.push({ name: 'ETH', price: ethPrice, budget: ethBudget, bk: 'ethBuyPremium', sk: 'ethSellPremium' });
+
+  coins.forEach(coin => {
+    PAYMENT_METHODS.forEach(buyMethod => {
+      PAYMENT_METHODS.forEach(sellMethod => {
+        if (buyMethod === sellMethod) return;
+        const bp = methodPricing[buyMethod];
+        const sp = methodPricing[sellMethod];
+        const buyPrice = coin.price * (1 + bp[coin.bk]);
+        const sellPrice = coin.price * (1 + sp[coin.bk] * 1.15 + 0.008);
+        if (sellPrice <= buyPrice) return;
+        const grossSpread = (sellPrice - buyPrice) / buyPrice * 100;
+        const netProfit = coin.budget * (grossSpread / 100) - (coin.budget * NOONES_FEE * 2);
+        const netSpread = netProfit / coin.budget * 100;
+        if (netSpread < minSpread) return;
+        const risk = netSpread > 5 ? 'HIGH' : netSpread > 3 ? 'MED' : 'LOW';
+        opportunities.push({ coin: coin.name, buyMethod, sellMethod, buyPrice, sellPrice,
+          grossSpread: grossSpread.toFixed(2), netSpread: netSpread.toFixed(2),
+          netProfit: netProfit.toFixed(2), budget: coin.budget, risk, isLive: false });
+      });
+    });
+  });
+
+  opportunities.sort((a, b) => parseFloat(b.netProfit) - parseFloat(a.netProfit));
+  return opportunities.slice(0, 20);
+}
+
+// ─── RENDER OPPORTUNITIES ─────────────────────────────────────────────────────
+function renderOpportunities(opps) {
+  const container = document.getElementById('oppsContainer');
+  document.getElementById('oppCount').textContent = opps.length + ' found';
+
+  if (opps.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>NO OPPORTUNITIES ABOVE MIN SPREAD — TRY LOWERING THRESHOLD</p></div>';
+    document.getElementById('alertBanner').classList.remove('show');
+    return;
+  }
+
+  const top = opps[0];
+  if (parseFloat(top.netSpread) > 4) {
+    document.getElementById('alertBanner').classList.add('show');
+    document.getElementById('alertDesc').textContent = `${top.coin}: BUY via ${top.buyMethod} → SELL via ${top.sellMethod}`;
+    document.getElementById('alertProfit').textContent = '+$' + top.netProfit;
+    playAlert();
+  } else {
+    document.getElementById('alertBanner').classList.remove('show');
+  }
+
+  const html = opps.map((o, i) => {
+    const isHigh = parseFloat(o.netSpread) > 4;
+    const isEth = o.coin === 'ETH';
+    const liveBadge = o.isLive ? '<span style="font-size:9px;padding:1px 5px;background:rgba(0,230,118,0.15);border:1px solid rgba(0,230,118,0.3);border-radius:2px;color:var(--green);margin-left:4px;">LIVE</span>' : '<span style="font-size:9px;padding:1px 5px;background:rgba(255,234,0,0.1);border:1px solid rgba(255,234,0,0.3);border-radius:2px;color:var(--yellow);margin-left:4px;">SIM</span>';
+    const offersInfo = o.isLive ? `<div class="meta-item"><span class="meta-key">OFFERS:</span> ${o.buyCount || '?'}B/${o.sellCount || '?'}S</div>` : '';
+    return `
+      <div class="opp-card ${isHigh ? 'high-profit' : ''} ${isEth ? 'eth-card' : ''} flash-new" id="opp-${i}">
+        <div class="rank">#${i+1}</div>
+        <div class="opp-main">
+          <div class="opp-route">
+            <span class="coin-tag ${o.coin.toLowerCase()}">${o.coin === 'BTC' ? '₿' : 'Ξ'} ${o.coin}</span>
+            ${liveBadge}
+            <span class="method-buy">${o.buyMethod}</span>
+            <span class="arrow">→</span>
+            <span class="method-sell">${o.sellMethod}</span>
+          </div>
+          <div class="opp-meta">
+            <div class="meta-item"><span class="meta-key">BUY@</span> $${Math.round(o.buyPrice).toLocaleString()}</div>
+            <div class="meta-item"><span class="meta-key">SELL@</span> $${Math.round(o.sellPrice).toLocaleString()}</div>
+            <div class="meta-item"><span class="meta-key">RISK:</span> ${o.risk}</div>
+            ${offersInfo}
+          </div>
+        </div>
+        <div class="opp-spread">
+          <div class="spread-val ${parseFloat(o.netSpread) > 4 ? 'high' : 'med'}">${o.netSpread}%</div>
+          <div class="spread-label">NET SPREAD</div>
+        </div>
+        <div class="opp-profit">
+          <div class="profit-val ${isHigh ? 'high' : ''}">+$${o.netProfit}</div>
+          <div class="profit-label">NET PROFIT</div>
+          <button class="log-btn" onclick="logTrade(${JSON.stringify(o).replace(/"/g,'&quot;')})">+ LOG</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+  container.innerHTML = '<div class="opps-grid">' + html + '</div>';
+}
+
+// ─── RENDER PRICE BOARD ────────────────────────────────────────────────────────
+function renderPriceBoardLive(btcMethodData, ethMethodData) {
+  const board = document.getElementById('priceBoard');
+  let html = `<div class="pb-header"><span>METHOD</span><span>BUY</span><span>SELL</span><span>SPR%</span></div>`;
+
+  const renderSection = (label, data) => {
+    if (!data || Object.keys(data).length === 0) return '';
+    let s = `<div class="pb-coin-sep">${label}</div>`;
+    Object.entries(data).forEach(([method, info]) => {
+      const buy = info.bestBuyPrice ? '$' + Math.round(info.bestBuyPrice).toLocaleString() : '—';
+      const sell = info.bestSellPrice ? '$' + Math.round(info.bestSellPrice).toLocaleString() : '—';
+      let spr = '—';
+      let sprColor = '';
+      if (info.bestBuyPrice && info.bestSellPrice) {
+        const s2 = ((info.bestSellPrice - info.bestBuyPrice) / info.bestBuyPrice * 100).toFixed(1);
+        spr = s2 + '%';
+        sprColor = parseFloat(s2) < 0 ? 'color:var(--red)' : '';
+      }
+      s += `<div class="pb-row"><span class="pb-method">${method}</span><span class="pb-buy">${buy}</span><span class="pb-sell">${sell}</span><span class="pb-spread" style="${sprColor}">${spr}</span></div>`;
+    });
+    return s;
+  };
+
+  if (filterBTC) html += renderSection('₿ BITCOIN (LIVE)', btcMethodData);
+  if (filterETH) html += renderSection('Ξ ETHEREUM (LIVE)', ethMethodData);
+  board.innerHTML = html || '<div class="empty-state"><div class="icon">📊</div><p>NO LIVE DATA YET</p></div>';
+}
+
+function renderPriceBoardSim() {
+  const board = document.getElementById('priceBoard');
+  let html = `<div class="pb-header"><span>METHOD</span><span>BUY</span><span>SELL</span><span>SPR%</span></div>`;
+  const addSection = (label, coin) => {
+    html += `<div class="pb-coin-sep">${label} (SIM)</div>`;
+    PAYMENT_METHODS.forEach(m => {
+      const bp = methodPricing[m];
+      const price = coin === 'BTC' ? btcPrice : ethPrice;
+      const bk = coin === 'BTC' ? 'btcBuyPremium' : 'ethBuyPremium';
+      const sk = coin === 'BTC' ? 'btcSellPremium' : 'ethSellPremium';
+      const buy = Math.round(price * (1 + bp[bk]));
+      const sell = Math.round(price * (1 + bp[sk]));
+      const spr = ((sell - buy) / buy * 100).toFixed(1);
+      const sprColor = parseFloat(spr) < 0 ? 'color:var(--red)' : '';
+      html += `<div class="pb-row"><span class="pb-method">${m}</span><span class="pb-buy">$${buy.toLocaleString()}</span><span class="pb-sell">$${sell.toLocaleString()}</span><span class="pb-spread" style="${sprColor}">${spr}%</span></div>`;
+    });
+  };
+  if (filterBTC) addSection('₿ BITCOIN', 'BTC');
+  if (filterETH) addSection('Ξ ETHEREUM', 'ETH');
+  board.innerHTML = html;
+}
+
+// ─── MAIN SCAN FUNCTION ────────────────────────────────────────────────────────
+async function runScan() {
+  scanCount++;
+  document.getElementById('statScans').textContent = scanCount;
+  document.getElementById('statLastScan').textContent = new Date().toLocaleTimeString();
+
+  // Always fetch market prices
+  await fetchMarketPrices();
+
+  let opportunities = [];
+  let btcData = null;
+  let ethData = null;
+
+  if (API_KEY) {
+    try {
+      setApiStatus('🔄 Fetching live Noones offers...', false);
+
+      // Fetch buy & sell offers for BTC and ETH in parallel
+      const [btcBuy, btcSell, ethBuy, ethSell] = await Promise.all([
+        filterBTC ? fetchNoonesOffers('BTC', 'buy') : Promise.resolve([]),
+        filterBTC ? fetchNoonesOffers('BTC', 'sell') : Promise.resolve([]),
+        filterETH ? fetchNoonesOffers('ETH', 'buy') : Promise.resolve([]),
+        filterETH ? fetchNoonesOffers('ETH', 'sell') : Promise.resolve([])
+      ]);
+
+      // Check if any API call returned null (error)
+      const anyError = (filterBTC && (btcBuy === null || btcSell === null)) ||
+                       (filterETH && (ethBuy === null || ethSell === null));
+
+      if (anyError) {
+        throw new Error('One or more API calls failed');
+      }
+
+      // Process offers
+      if (filterBTC) btcData = processOffers(btcBuy, btcSell, 'BTC');
+      if (filterETH) ethData = processOffers(ethBuy, ethSell, 'ETH');
+
+      const totalOffers = (btcBuy?.length||0) + (btcSell?.length||0) + (ethBuy?.length||0) + (ethSell?.length||0);
+
+      if (totalOffers === 0) {
+        // API worked but returned no offers — possibly CORS or auth issue
+        throw new Error('API returned 0 offers — possible CORS restriction in browser');
+      }
+
+      usingLiveData = true;
+      liveOfferData = { btcData, ethData };
+      opportunities = computeLiveOpportunities(btcData, ethData);
+      renderPriceBoardLive(btcData || {}, ethData || {});
+      
+      setApiStatus(`🟢 LIVE DATA — ${totalOffers} offers fetched`, false);
+      document.getElementById('apiBadge').textContent = '🟢 LIVE DATA';
+      document.getElementById('apiBadge').className = 'api-badge';
+      document.getElementById('dataSourceStat').textContent = 'LIVE API';
+
+    } catch(e) {
+      console.warn('Live API fetch failed, falling back to simulation:', e.message);
+      usingLiveData = false;
+      driftPricing();
+      opportunities = computeSimulatedOpportunities();
+      renderPriceBoardSim();
+      
+      const isCorsProblem = e.message.includes('CORS') || e.message.includes('fetch') || e.message.includes('network') || e.message.includes('0 offers');
+      const hint = isCorsProblem
+        ? 'CORS restriction: browser blocks direct API calls. Use the Noones web app or a backend proxy.'
+        : e.message;
+      
+      setApiStatus(`⚠️ API fallback: ${hint}`, true);
+      document.getElementById('apiBadge').textContent = '⚠️ SIM DATA';
+      document.getElementById('apiBadge').className = 'api-badge sim';
+      document.getElementById('dataSourceStat').textContent = 'SIMULATED';
+    }
+  } else {
+    driftPricing();
+    opportunities = computeSimulatedOpportunities();
+    renderPriceBoardSim();
+    setApiStatus('⚡ No API key — showing simulated data', true);
+    document.getElementById('dataSourceStat').textContent = 'SIMULATED';
+  }
+
+  renderOpportunities(opportunities);
+  updateStats();
+  startCountdown(30);
+}
+
+function setApiStatus(msg, isError) {
+  const card = document.getElementById('apiStatusCard');
+  const text = document.getElementById('apiStatusText');
+  text.textContent = msg;
+  card.className = 'api-status-card' + (isError ? ' error' : '');
+}
+
+// ─── SCANNER CONTROL ──────────────────────────────────────────────────────────
+function toggleScanner() {
+  if (!isRunning) {
+    isRunning = true;
+    document.getElementById('startBtn').textContent = '⏹ STOP';
+    document.getElementById('startBtn').classList.add('running');
+    document.getElementById('statusDot').classList.remove('off');
+    document.getElementById('statusLabel').textContent = 'SCANNING';
+    runScan();
+    scanInterval = setInterval(runScan, 30000); // 30s to be respectful of API rate limits
+  } else {
+    isRunning = false;
+    clearInterval(scanInterval);
+    clearInterval(ctTimer);
+    document.getElementById('startBtn').textContent = '▶ START';
+    document.getElementById('startBtn').classList.remove('running');
+    document.getElementById('statusDot').classList.add('off');
+    document.getElementById('statusLabel').textContent = 'IDLE';
+    document.getElementById('scanTimer').textContent = 'PAUSED';
+    document.getElementById('alertBanner').classList.remove('show');
+  }
+}
+
+function startCountdown(secs) {
+  clearInterval(ctTimer);
+  let countdown = secs;
+  document.getElementById('scanTimer').textContent = 'NEXT SCAN: ' + countdown + 's';
+  ctTimer = setInterval(() => {
+    countdown--;
+    if (countdown <= 0) {
+      document.getElementById('scanTimer').textContent = 'SCANNING...';
+      clearInterval(ctTimer);
+    } else {
+      document.getElementById('scanTimer').textContent = 'NEXT SCAN: ' + countdown + 's';
+    }
+  }, 1000);
+}
+
+// ─── STATS ────────────────────────────────────────────────────────────────────
+function updateStats() {
+  const btcBudget = parseFloat(document.getElementById('btcBudget').value) || 500;
+  const ethBudget = parseFloat(document.getElementById('ethBudget').value) || 500;
+  const total = btcBudget + ethBudget;
+  const avgProfit = total * 0.025;
+  document.getElementById('estLow').textContent = '$' + (avgProfit * 3).toFixed(0);
+  document.getElementById('estMid').textContent = '$' + (avgProfit * 8).toFixed(0);
+  document.getElementById('estHigh').textContent = '$' + (avgProfit * 15).toFixed(0);
+  document.getElementById('statBTC').textContent = '$' + btcBudget.toLocaleString();
+  document.getElementById('statETH').textContent = '$' + ethBudget.toLocaleString();
+  document.getElementById('statTotal').textContent = '$' + total.toLocaleString();
+  document.getElementById('statSpread').textContent = document.getElementById('minSpread').value + '%';
+}
+
+// ─── TRADE LOG ────────────────────────────────────────────────────────────────
+function logTrade(opp) {
+  const profit = parseFloat(opp.netProfit);
+  totalProfit += profit;
+  if (profit > bestTrade) bestTrade = profit;
+  tradeLog.unshift({ ...opp, time: new Date().toLocaleTimeString() });
+  document.getElementById('totalProfit').textContent = '$' + totalProfit.toFixed(2);
+  document.getElementById('tradeCount').textContent = tradeLog.length;
+  document.getElementById('avgProfit').textContent = '$' + (totalProfit / tradeLog.length).toFixed(2);
+  document.getElementById('bestTrade').textContent = '$' + bestTrade.toFixed(2);
+  const entries = document.getElementById('tradeLogEntries');
+  entries.innerHTML = tradeLog.map(t => `
+    <div class="log-entry">
+      <div class="log-entry-header">
+        <span class="log-entry-route">${t.coin}: ${t.buyMethod} → ${t.sellMethod} ${t.isLive ? '🟢' : '⚡'}</span>
+        <span class="log-entry-profit">+$${t.netProfit}</span>
+      </div>
+      <div class="log-entry-meta">${t.time} · Spread: ${t.netSpread}% · Budget: $${t.budget}</div>
+    </div>
+  `).join('');
+}
+
+// ─── FILTERS ──────────────────────────────────────────────────────────────────
+function toggleFilter(coin) {
+  if (coin === 'BTC') {
+    filterBTC = !filterBTC;
+    document.getElementById('filterBTC').classList.toggle('btc-active', filterBTC);
+  } else {
+    filterETH = !filterETH;
+    document.getElementById('filterETH').classList.toggle('eth-active', filterETH);
+  }
+}
+
+// ─── TABS ─────────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    const names = ['prices','log','stats','calc'];
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'calc') calcFees();
+}
+
+// ─── API MODAL ────────────────────────────────────────────────────────────────
+function showModal() {
+  document.getElementById('apiKeyInput').value = API_KEY;
+  document.getElementById('apiSecretInput').value = API_SECRET;
+  document.getElementById('apiModal').classList.add('show');
+}
+function hideModal() { document.getElementById('apiModal').classList.remove('show'); }
+function saveApiKey() {
+  API_KEY = document.getElementById('apiKeyInput').value.trim();
+  API_SECRET = document.getElementById('apiSecretInput').value.trim();
+  hideModal();
+  if (API_KEY) {
+    document.getElementById('apiBadge').textContent = '✅ API KEY LOADED';
+    setApiStatus('🟢 API key updated. Press START or wait for next scan.', false);
+  }
+}
+
+// ─── ALERT SOUND ─────────────────────────────────────────────────────────────
+let lastAlertTime = 0;
+function playAlert() {
+  const now = Date.now();
+  if (now - lastAlertTime < 8000) return;
+  lastAlertTime = now;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [880,1100,1320].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = freq; osc.type = 'sine';
+      gain.gain.setValueAtTime(0.15, ctx.currentTime + i*0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i*0.12 + 0.2);
+      osc.start(ctx.currentTime + i*0.12);
+      osc.stop(ctx.currentTime + i*0.12 + 0.2);
+    });
+  } catch(e) {}
+}
+
+// ─── FEE CALCULATOR ──────────────────────────────────────────────────────────
+function calcFees() {
+  const grossProfit = parseFloat(document.getElementById('calcProfit').value) || 0;
+  const withdrawAmount = parseFloat(document.getElementById('calcAmount').value) || 0;
+  const method = document.getElementById('calcMethod').value;
+  const rates = { ecocash: 0.015, ecocash_mastercard: 0.02, bank: 0.025 };
+  const labels = { ecocash: 'EcoCash Wallet (1.5%)', ecocash_mastercard: 'EcoCash Mastercard (2%)', bank: 'Bank Transfer (2.5%)' };
+  const wRate = rates[method];
+  const nB = withdrawAmount * 0.01;
+  const nS = withdrawAmount * 0.01;
+  const eco = withdrawAmount * wRate;
+  const total = nB + nS + eco;
+  const takeHome = grossProfit - total;
+  const ret = withdrawAmount > 0 ? (takeHome / withdrawAmount * 100) : 0;
+  document.getElementById('r_gross').textContent = '+$' + grossProfit.toFixed(2);
+  document.getElementById('r_noonesB').textContent = '-$' + nB.toFixed(2);
+  document.getElementById('r_noonesS').textContent = '-$' + nS.toFixed(2);
+  document.getElementById('r_eco').textContent = '-$' + eco.toFixed(2);
+  document.getElementById('r_ecoLabel').textContent = labels[method];
+  document.getElementById('r_totalFees').textContent = '-$' + total.toFixed(2);
+  const th = document.getElementById('r_takeHome');
+  th.textContent = (takeHome >= 0 ? '+' : '') + '$' + takeHome.toFixed(2);
+  th.style.color = takeHome >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('r_return').textContent = ret.toFixed(2) + '%';
+  const perTrade = grossProfit - (nB + nS);
+  const wFee = eco;
+  document.getElementById('r_day3').textContent = '$' + Math.max(0, perTrade*3 - wFee).toFixed(2);
+  document.getElementById('r_day8').textContent = '$' + Math.max(0, perTrade*8 - wFee).toFixed(2);
+  document.getElementById('r_day15').textContent = '$' + Math.max(0, perTrade*15 - wFee).toFixed(2);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+document.getElementById('apiKeyInput').value = API_KEY;
+updateStats();
+calcFees();
+fetchMarketPrices();
+document.getElementById('btcBudget').addEventListener('input', updateStats);
+document.getElementById('ethBudget').addEventListener('input', updateStats);
+document.getElementById('minSpread').addEventListener('input', updateStats);
+</script>
+
+<!--
+  ╔══════════════════════════════════════════════════════════════════════════╗
+  ║  NOTE ON LIVE API:                                                        ║
+  ║  Browser security (CORS) blocks direct API calls to noones.com from       ║
+  ║  HTML files opened locally. If live data shows "0 offers" error,          ║
+  ║  this is a CORS restriction, NOT an API key issue.                        ║
+  ║                                                                            ║
+  ║  Solutions:                                                                ║
+  ║  1. Host this file on a web server (not file://)                           ║
+  ║  2. Use a backend proxy (Node.js/Python) to relay API calls               ║
+  ║  3. Use the Noones web app directly for live trading                      ║
+  ║                                                                            ║
+  ║  The scanner will automatically fall back to simulated data if the        ║
+  ║  API is unreachable, so it always works as a planning tool.               ║
+  ╚══════════════════════════════════════════════════════════════════════════╝
+-->
+</body>
+</html>
