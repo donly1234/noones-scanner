@@ -793,8 +793,14 @@ const PAYMENT_METHODS = [
   'Airtel Money', 'Cash Deposit', 'OXXO', 'Transfast'
 ];
 
-// Noones API base — their v1 offer list endpoint
-const API_BASE = 'https://api.noones.com/noones/v1';
+// Noones API base — routed through CORS proxy to bypass browser restrictions
+const NOONES_DIRECT = 'https://api.noones.com/noones/v1';
+const CORS_PROXIES = [
+  'https://corsproxy.io/?',
+  'https://api.allorigins.win/raw?url=',
+];
+let activeProxy = 0;
+const API_BASE = NOONES_DIRECT; // used with proxy wrapper below
 
 let isRunning = false;
 let scanInterval = null;
@@ -838,22 +844,44 @@ async function noonesGet(endpoint, params = {}) {
 }
 
 async function noonesPost(endpoint, body = {}) {
-  const res = await fetch(API_BASE + endpoint, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${API_KEY}`,
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    },
-    body: JSON.stringify(body)
-  });
+  const targetUrl = NOONES_DIRECT + endpoint;
+  const proxy = CORS_PROXIES[activeProxy];
   
+  // corsproxy.io wraps the URL differently from allorigins
+  let fetchUrl, fetchOptions;
+  if (activeProxy === 0) {
+    // corsproxy.io — append encoded target URL
+    fetchUrl = proxy + encodeURIComponent(targetUrl);
+    fetchOptions = {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${API_KEY}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'x-requested-with': 'XMLHttpRequest'
+      },
+      body: JSON.stringify(body)
+    };
+  } else {
+    // allorigins — GET only, so we encode everything in URL
+    fetchUrl = proxy + encodeURIComponent(targetUrl + '?' + new URLSearchParams(body).toString());
+    fetchOptions = {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    };
+  }
+
+  const res = await fetch(fetchUrl, fetchOptions);
   apiCallCount++;
   document.getElementById('statApiCalls').textContent = apiCallCount;
-  
+
   if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`API ${res.status}: ${txt}`);
+    // Try next proxy
+    if (activeProxy < CORS_PROXIES.length - 1) {
+      activeProxy++;
+      return noonesPost(endpoint, body);
+    }
+    throw new Error(`API ${res.status} via proxy`);
   }
   return res.json();
 }
@@ -896,7 +924,6 @@ async function fetchMarketPrices() {
 // Noones offer list endpoint: POST /offer/list
 // Returns offers with payment_method, type (buy/sell), fiat_price_per_btc etc.
 async function fetchNoonesOffers(cryptoCurrency, offerType) {
-  // offerType: 'buy' = you buying crypto (find sellers), 'sell' = you selling crypto (find buyers)
   try {
     const data = await noonesPost('/offer/list', {
       crypto_currency_code: cryptoCurrency,
@@ -904,10 +931,11 @@ async function fetchNoonesOffers(cryptoCurrency, offerType) {
       fiat_currency_code: 'USD',
       limit: 50
     });
-    return data?.data?.offers || data?.offers || [];
+    // Handle various response shapes
+    return data?.data?.offers || data?.offers || data?.data || [];
   } catch(e) {
     console.warn(`Failed to fetch ${cryptoCurrency} ${offerType} offers:`, e.message);
-    return null; // null = API error, not empty
+    return null;
   }
 }
 
